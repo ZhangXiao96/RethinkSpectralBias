@@ -106,7 +106,6 @@ if not os.path.exists(save_path):
 np.savez(os.path.join(save_path, "label_noise.npz"), index=random_index, value=random_part)
 writer = SummaryWriter(log_dir=os.path.join(save_path, "log"), flush_secs=30)
 
-itr_index = 1
 wrapper.train()
 
 for id_epoch in range(train_epoch):
@@ -121,11 +120,10 @@ for id_epoch in range(train_epoch):
         train_size += len(targets)
         print("epoch:{}/{}, batch:{}/{}, loss={}, acc={}".
               format(id_epoch+1, train_epoch, id_batch+1, len(train_loader), loss, acc))
-        itr_index += 1
     train_loss /= id_batch
     train_acc /= train_size
-    writer.add_scalar("train acc", train_acc, itr_index)
-    writer.add_scalar("train loss", train_loss, itr_index)
+    writer.add_scalar("train acc", train_acc, id_epoch+1)
+    writer.add_scalar("train loss", train_loss, id_epoch+1)
 
     # eval
     wrapper.eval()
@@ -134,31 +132,30 @@ for id_epoch in range(train_epoch):
     print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, train_epoch, id_batch + 1, len(train_loader)))
     print("clean: loss={}, acc={}".format(test_loss, test_acc))
     print("noise: loss={}, acc={}".format(noise_loss, noise_acc))
-    writer.add_scalar("test acc", test_acc, itr_index)
-    writer.add_scalar("test loss", test_loss, itr_index)
-    writer.add_scalar("noise acc", noise_acc, itr_index)
-    writer.add_scalar("noise loss", noise_loss, itr_index)
+    writer.add_scalar("test acc", test_acc, id_epoch+1)
+    writer.add_scalar("test loss", test_loss, id_epoch+1)
+    writer.add_scalar("noise acc", noise_acc, id_epoch+1)
+    writer.add_scalar("noise loss", noise_loss, id_epoch+1)
     state = {
         'net': model.state_dict(),
         'optim': optimizer.state_dict(),
         'acc': test_acc,
-        'epoch': id_epoch,
-        'itr': itr_index
+        'epoch': id_epoch
     }
     torch.save(state, os.path.join(save_path, "ckpt.pkl"))
 
     if id_epoch % 1 == 0:
         test_energy = wrapper.predict_line_fft(test_loader, delta_h, nb_interpolation)
-        avg_test_energy = np.mean(test_energy[:500], axis=(0, 1))
-        writer.add_scalars("test energy", {"{}".format(i): _ for i, _ in enumerate(avg_test_energy)}, itr_index)
+        avg_test_energy = np.mean(test_energy[:500]**2, axis=(0, 1))
+        writer.add_scalars("test energy", {"{}".format(i): _ for i, _ in enumerate(avg_test_energy)}, id_epoch+1)
 
         pert_energy = wrapper.predict_line_fft(noise_loader, delta_h, nb_interpolation)
-        avg_pert_energy = np.mean(pert_energy[:500], axis=(0, 1))
-        writer.add_scalars("pert energy", {"{}".format(i): _ for i, _ in enumerate(avg_pert_energy)}, itr_index)
+        avg_pert_energy = np.mean(pert_energy[:500]**2, axis=(0, 1))
+        writer.add_scalars("pert energy", {"{}".format(i): _ for i, _ in enumerate(avg_pert_energy)}, id_epoch+1)
 
         train_energy = wrapper.predict_line_fft(train_loader, delta_h, nb_interpolation)
-        avg_train_energy = np.mean(train_energy[:500], axis=(0, 1))
-        writer.add_scalars("train energy", {"{}".format(i): _ for i, _ in enumerate(avg_train_energy)}, itr_index)
+        avg_train_energy = np.mean(train_energy[:500]**2, axis=(0, 1))
+        writer.add_scalars("train energy", {"{}".format(i): _ for i, _ in enumerate(avg_train_energy)}, id_epoch+1)
     print()
     # return to train state.
     wrapper.train()

@@ -60,9 +60,6 @@ class ModelWrapper(object):
                     results.append(result)
                 results = np.array(results).transpose(1, 2, 0)
                 A = np.abs(np.fft.rfft(results, axis=-1))
-                # A = np.mean(A, axis=-2, keepdims=False)
-                # he_prob = A / np.sum(A, axis=-1, keepdims=True)
-                # prob_list.append(he_prob)
                 prob_list.append(A)
                 if nb_x >= max_num:
                     break
@@ -107,7 +104,6 @@ class ModelWrapper(object):
                 break
         As = np.concatenate(prob_list, axis=0)
         return As
-
 
     def eval_on_batch(self, inputs, targets):
         inputs, targets = inputs.to(self.device), targets.to(self.device)
